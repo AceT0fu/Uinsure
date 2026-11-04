@@ -9,9 +9,9 @@ namespace Uinsure.Api.Services;
 
 public class PolicyService(IPolicyRepository policyRepository) : IPolicyService
 {
-    public Task<Policy?> GetPolicyAsync(string reference)
+    public async Task<Policy?> GetPolicyAsync(string reference)
     {
-        throw new NotImplementedException();
+        return await policyRepository.GetPolicyByReferenceAsync(reference);
     }
 
     public async Task<Policy> SellPolicyAsync(SellPolicyRequest request)

@@ -22,19 +22,6 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>
@@ -60,8 +47,28 @@ app.UseExceptionHandler(errorApp =>
                     Error = notFoundException.Message
                 });
                 break;
+            default:
+                context.Response.StatusCode = 500;
+
+                await context.Response.WriteAsJsonAsync(new
+                {
+                    Error = "An unexpected error occurred."
+                });
+                break;
         }
     });
 });
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
 
 app.Run();

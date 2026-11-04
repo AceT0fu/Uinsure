@@ -9,9 +9,9 @@ namespace Uinsure.Controllers;
 [Route("api/policies")]
 public class PoliciesController : ControllerBase
 {
-    private readonly PolicyService _policyService;
+    private readonly IPolicyService _policyService;
 
-    public PoliciesController(PolicyService policyService)
+    public PoliciesController(IPolicyService policyService)
     {
         _policyService = policyService;
     }
