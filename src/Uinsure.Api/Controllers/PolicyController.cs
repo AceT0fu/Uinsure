@@ -1,26 +1,58 @@
 using Microsoft.AspNetCore.Mvc;
+using Uinsure.Api.DTOs;
+using Uinsure.Api.Services;
+using Uinsure.Models;
 
-namespace Uinsure.Controllers
+namespace Uinsure.Controllers;
+
+[ApiController]
+[Route("api/policies")]
+public class PoliciesController : ControllerBase
 {
-    [ApiController]
-    [Route("[controller]")]
-    public class PolicyController : ControllerBase
-    {
-        private static readonly string[] Summaries =
-        [
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-        ];
+    private readonly PolicyService _policyService;
 
-        [HttpGet(Name = "GetWeatherForecast")]
-        public IEnumerable<WeatherForecast> Get()
+    public PoliciesController(PolicyService policyService)
+    {
+        _policyService = policyService;
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<Policy>> SellPolicy(SellPolicyRequest request)
+    {
+        var policy = await _policyService.SellPolicyAsync(request);
+
+        return CreatedAtAction(
+            nameof(GetPolicy),
+            new { reference = policy.Reference },
+            policy);
+    }
+
+    [HttpGet("{reference}")]
+    public async Task<ActionResult<Policy>> GetPolicy(string reference)
+    {
+        var policy = await _policyService.GetPolicyAsync(reference);
+
+        if (policy == null)
         {
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
-            {
-                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
-            })
-            .ToArray();
+            return NotFound();
         }
+
+        return Ok(policy);
+    }
+
+    [HttpPost("{reference}/renew")]
+    public async Task<ActionResult<Policy>> RenewPolicy(string reference)
+    {
+        var renewedPolicy = await _policyService.RenewPolicyAsync(reference);
+
+        return Ok(renewedPolicy);
+    }
+
+    [HttpPost("{reference}/cancel")]
+    public async Task<ActionResult<Refund>> CancelPolicy(string reference)
+    {
+        var refund = await _policyService.CancelPolicyAsync(reference);
+
+        return Ok(refund);
     }
 }

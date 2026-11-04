@@ -1,4 +1,4 @@
-﻿namespace Uinsure.Api.Validation;
+﻿namespace Uinsure.Api.Validation.Exceptions;
 
 public class ValidationException : Exception
 {

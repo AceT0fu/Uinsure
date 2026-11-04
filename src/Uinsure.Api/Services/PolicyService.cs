@@ -1,20 +1,22 @@
 ﻿using Uinsure.Api.DTOs;
 using Uinsure.Api.Infrastructure;
+using Uinsure.Api.Models.Enums;
 using Uinsure.Api.Validation;
+using Uinsure.Api.Validation.Exceptions;
 using Uinsure.Models;
 
 namespace Uinsure.Api.Services;
 
-public class PolicyService(IPolicyRepository policyRepository, PolicyValidator policyValidator) : IPolicyService
+public class PolicyService(IPolicyRepository policyRepository) : IPolicyService
 {
-    public Task<Policy?> GetPolicyAsync()
+    public Task<Policy?> GetPolicyAsync(string reference)
     {
         throw new NotImplementedException();
     }
 
     public async Task<Policy> SellPolicyAsync(SellPolicyRequest request)
     {
-        var errors = await policyValidator.ValidateSellPolicy(request);
+        var errors = PolicyValidator.ValidateSellPolicyRequest(request);
 
         if (errors.Any())
         {
@@ -58,17 +60,103 @@ public class PolicyService(IPolicyRepository policyRepository, PolicyValidator p
         return policy;
     }
 
-    public Task<Policy> RenewPolicyAsync()
+    public async Task<Policy> RenewPolicyAsync(string reference)
     {
-        throw new NotImplementedException();
+        var policy = await policyRepository.GetPolicyByReferenceAsync(reference);
+
+        var errors = PolicyValidator.ValidateRenewPolicy(policy);
+
+        if (errors.Any())
+        {
+            throw new ValidationException(errors);
+        }
+
+        var renewedPolicy = new Policy()
+        {
+            Reference = Guid.NewGuid().ToString(),
+            PreviousReference = policy!.Reference,
+            Type = policy.Type,
+            StartDate = policy.EndDate,
+            EndDate = policy.EndDate.AddYears(1),
+            Amount = policy.Amount,
+            HasClaims = false,
+            AutoRenew = policy.AutoRenew,
+            PolicyHolders = policy.PolicyHolders.Select(ph => new PolicyHolder
+            {
+                FirstName = ph.FirstName,
+                LastName = ph.LastName,
+                DateOfBirth = ph.DateOfBirth
+            })
+            .ToList(),
+            Property = new Property
+            {
+                AddressLine1 = policy.Property.AddressLine1,
+                AddressLine2 = policy.Property.AddressLine2,
+                AddressLine3 = policy.Property.AddressLine3,
+                PostCode = policy.Property.PostCode
+            }
+        };
+
+        if (policy.AutoRenew)
+        {
+            renewedPolicy.Payment = new Payment
+            {
+                PaymentReference = Guid.NewGuid().ToString(),
+                Type = policy.Payment.Type,
+                Amount = policy.Amount,
+            };
+        }
+
+        // For renewals, create a new policy to keep the history of the previous policy intact
+        await policyRepository.CreatePolicyAsync(renewedPolicy);
+
+        return renewedPolicy;
     }
 
-    public Task<Refund> CancelPolicyAsync()
+    public async Task<Refund> CancelPolicyAsync(string reference)
     {
-        throw new NotImplementedException();
+        var policy = await policyRepository.GetPolicyByReferenceAsync(reference);
+
+        if (policy.Status != PolicyStatus.Active)
+        {
+            throw new ValidationException(new List<string> { $"Policy has already been {policy.Status}." });
+        }
+
+        policy.Status = PolicyStatus.Cancelled;
+        await policyRepository.UpdatePolicyAsync(policy);
+
+        var refundAmount = CalculateRefundAmount(policy);
+
+        return new Refund
+        {
+            Reference = policy.Reference,
+            Type = policy.Payment.Type,
+            Amount = refundAmount
+        };
     }
 
+    private decimal CalculateRefundAmount(Policy policy)
+    {
+        if (DateTime.UtcNow <= policy.StartDate.AddDays(14))
+        {
+            return policy.Amount;
+        }
 
+        if (DateTime.UtcNow >= policy.EndDate)
+        {
+            return 0;
+        }
 
+        if (policy.HasClaims)
+        {
+            return 0;
+        }
 
+        // Calculate pro rata refund based on the remaining days of the policy
+        var daysRemaining = (policy.EndDate - DateTime.UtcNow).TotalDays;
+        var policyDays = (policy.EndDate - policy.StartDate).TotalDays;
+
+        return policy.Amount * (decimal)(daysRemaining / policyDays);
+        
+    }
 }

@@ -6,5 +6,5 @@ public class Payment
 {
     public string PaymentReference { get; set; }
     public PaymentType Type { get; set; }
-    public double Amount { get; set; }
+    public decimal Amount { get; set; }
 }

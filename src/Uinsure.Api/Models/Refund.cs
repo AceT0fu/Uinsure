@@ -4,7 +4,7 @@ namespace Uinsure.Models;
 
 public class Refund
 {
-    public string RefundReference { get; set; }
+    public string Reference { get; set; }
     public PaymentType Type { get; set; }
-    public double Amount { get; set; }
+    public decimal Amount { get; set; }
 }
