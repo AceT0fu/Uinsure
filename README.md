@@ -48,11 +48,10 @@ The following assumptions were made during implementation:
 Given additional time, the following improvements could be made:
 
 - Replace the in-memory repository with a database-backed implementation.
-- Full API integration tests, from service to repository, without mocks.
+- Full API integration tests, from service to repository, without mocks, to validate full end-to-end behaviour with data stores.
 - Introduce request/response DTOs for all endpoints.
 - Extract policy creation into a dedicated mapper/helper class.
 - Add structured logging and monitoring.
-- Add integration tests covering the API endpoints.
 - Implement authentication and authorisation.
 
 ---
