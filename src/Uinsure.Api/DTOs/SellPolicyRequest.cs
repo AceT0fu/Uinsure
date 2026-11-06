@@ -6,7 +6,7 @@ namespace Uinsure.Api.DTOs;
 public class SellPolicyRequest
 {
     public string Reference { get; set; }
-    public PolicyType Type { get; set; }
+    public PolicyType PolicyType { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public decimal Amount { get; set; }

@@ -1,32 +1,24 @@
 ﻿using Uinsure.Api.DTOs;
 using Uinsure.Models;
-using Uinsure.Api.Models.Enums;
-using Uinsure.Api.Validation.Exceptions;
+using static Uinsure.Api.Validation.Constants;
 
 namespace Uinsure.Api.Validation;
 
 // Throws a list of errors from validating the request
 public static class PolicyValidator
 {
-
     public static List<string> ValidateSellPolicyRequest(SellPolicyRequest request)
     {
         var errors = new List<string>();
 
-        const int MAX_DAYS_BEFORE_START = 60;
-        const int POLICY_DURATION = 1; // years
-        const int MIN_POLICY_HOLDERS = 1;
-        const int MAX_POLICY_HOLDERS = 3;
-        const int MIN_POLICY_HOLDER_AGE = 16; // years
-
-        if (request.StartDate > DateTime.UtcNow.AddDays(MAX_DAYS_BEFORE_START))
+        if (request.StartDate.Date > DateTime.UtcNow.AddDays(SELL_MAX_DAYS_BEFORE_START).Date)
         { 
-            errors.Add($"Policy start date cannot be more than {MAX_DAYS_BEFORE_START} days in the future.");
+            errors.Add($"Policy start date cannot be more than {SELL_MAX_DAYS_BEFORE_START} days in the future.");
         }
 
-        if (request.StartDate.AddYears(POLICY_DURATION) != request.EndDate)
+        if (request.StartDate.AddYears(SELL_POLICY_DURATION).Date != request.EndDate.Date)
         {
-            errors.Add($"Policy end date must be exactly {POLICY_DURATION} years after the start date.");
+            errors.Add($"Policy end date must be exactly {SELL_POLICY_DURATION} years after the start date.");
         }
 
         if (request.PolicyHolders == null)
@@ -35,16 +27,16 @@ public static class PolicyValidator
             return errors;
         }
 
-        if (request.PolicyHolders.Count < MIN_POLICY_HOLDERS || 
-            request.PolicyHolders.Count > MAX_POLICY_HOLDERS)
+        if (request.PolicyHolders.Count < SELL_MIN_POLICY_HOLDERS || 
+            request.PolicyHolders.Count > SELL_MAX_POLICY_HOLDERS)
         {
-            errors.Add($"Policy must have between {MIN_POLICY_HOLDERS} and {MAX_POLICY_HOLDERS} policy holders.");
+            errors.Add($"Policy must have between {SELL_MIN_POLICY_HOLDERS} and {SELL_MAX_POLICY_HOLDERS} policy holders.");
         }
 
         // Requirements says over 16, but I'm assuming that means 16 and over
-        if (request.PolicyHolders.Any(ph => ph.DateOfBirth.AddYears(MIN_POLICY_HOLDER_AGE) > request.StartDate))
+        if (request.PolicyHolders.Any(ph => ph.DateOfBirth.AddYears(SELL_MIN_POLICY_HOLDER_AGE) > request.StartDate))
         {
-            errors.Add($"All policy holders must be at least {MIN_POLICY_HOLDER_AGE} years old.");
+            errors.Add($"All policy holders must be at least {SELL_MIN_POLICY_HOLDER_AGE} years old.");
         }
 
         return errors;
@@ -54,16 +46,9 @@ public static class PolicyValidator
     {
         var errors = new List<string>();
 
-        const int MAX_DAYS_BEFORE_END = 30;
-
-        if (policy.Status != PolicyStatus.Active)
+        if (DateTime.UtcNow < policy.EndDate.AddDays(-RENEW_MAX_DAYS_BEFORE_END))
         {
-            throw new ValidationException(new List<string> { $"Policy has already been {policy.Status}." });
-        }
-
-        if (DateTime.UtcNow < policy.EndDate.AddDays(-MAX_DAYS_BEFORE_END))
-        {
-            errors.Add($"Policy with cannot be renewed more than {MAX_DAYS_BEFORE_END} days before its end date.");
+            errors.Add($"Policy with cannot be renewed more than {RENEW_MAX_DAYS_BEFORE_END} days before its end date.");
         }
 
         if (DateTime.UtcNow > policy.EndDate)

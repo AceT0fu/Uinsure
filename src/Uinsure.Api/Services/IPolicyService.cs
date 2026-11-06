@@ -7,6 +7,7 @@ public interface IPolicyService
 {
     Task<Policy?> GetPolicyAsync(string reference);
     Task<Policy> SellPolicyAsync(SellPolicyRequest request);
+    Task<Refund> GetCancellationQuoteAsync(string reference);
     Task<Refund> CancelPolicyAsync(string reference);
     Task<Policy> RenewPolicyAsync(string reference);
 }

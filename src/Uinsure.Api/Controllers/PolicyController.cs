@@ -40,6 +40,15 @@ public class PoliciesController : ControllerBase
         return Ok(policy);
     }
 
+    [HttpGet("{reference}/cancellation-quote")]
+    public async Task<ActionResult<Refund>> GetCancellationQuote(
+    string reference)
+    {
+        var refund = await _policyService.GetCancellationQuoteAsync(reference);
+
+        return Ok(refund);
+    }
+
     [HttpPost("{reference}/renew")]
     public async Task<ActionResult<Policy>> RenewPolicy(string reference)
     {

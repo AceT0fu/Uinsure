@@ -7,7 +7,7 @@ public class Policy
 {
     public string Reference { get; set; }
     public string PreviousReference { get; set; } // old reference before renewal
-    public PolicyType Type { get; set; }
+    public PolicyType PolicyType { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public decimal Amount { get; set; }

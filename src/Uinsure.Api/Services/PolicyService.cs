@@ -4,6 +4,7 @@ using Uinsure.Api.Models.Enums;
 using Uinsure.Api.Validation;
 using Uinsure.Api.Validation.Exceptions;
 using Uinsure.Models;
+using static Uinsure.Api.Validation.Constants;
 
 namespace Uinsure.Api.Services;
 
@@ -23,11 +24,11 @@ public class PolicyService(IPolicyRepository policyRepository) : IPolicyService
             throw new ValidationException(errors);
         }
 
-        // Could be moved to a mapper later to reduce code clutter/duplication at a later stage.
+        // Could be moved to a mapper later to reduce code clutter/duplication.
         var policy = new Policy()
         {
             Reference = request.Reference,
-            Type = request.Type,
+            PolicyType = request.PolicyType,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             Amount = request.Amount,
@@ -62,7 +63,7 @@ public class PolicyService(IPolicyRepository policyRepository) : IPolicyService
 
     public async Task<Policy> RenewPolicyAsync(string reference)
     {
-        var policy = await policyRepository.GetPolicyByReferenceAsync(reference);
+        var policy = await GetActivePolicyAsync(reference);
 
         var errors = PolicyValidator.ValidateRenewPolicy(policy);
 
@@ -75,7 +76,7 @@ public class PolicyService(IPolicyRepository policyRepository) : IPolicyService
         {
             Reference = Guid.NewGuid().ToString(),
             PreviousReference = policy!.Reference,
-            Type = policy.Type,
+            PolicyType = policy.PolicyType,
             StartDate = policy.EndDate,
             EndDate = policy.EndDate.AddYears(1),
             Amount = policy.Amount,
@@ -113,31 +114,51 @@ public class PolicyService(IPolicyRepository policyRepository) : IPolicyService
         return renewedPolicy;
     }
 
-    public async Task<Refund> CancelPolicyAsync(string reference)
+    public async Task<Refund> GetCancellationQuoteAsync(string reference)
     {
-        var policy = await policyRepository.GetPolicyByReferenceAsync(reference);
-
-        if (policy.Status != PolicyStatus.Active)
-        {
-            throw new ValidationException(new List<string> { $"Policy has already been {policy.Status}." });
-        }
-
-        policy.Status = PolicyStatus.Cancelled;
-        await policyRepository.UpdatePolicyAsync(policy);
-
-        var refundAmount = CalculateRefundAmount(policy);
+        var policy = await GetActivePolicyAsync(reference);
 
         return new Refund
         {
             Reference = policy.Reference,
             Type = policy.Payment.Type,
-            Amount = refundAmount
+            Amount = CalculateRefundAmount(policy)
         };
+    }
+
+    public async Task<Refund> CancelPolicyAsync(string reference)
+    {
+        var policy = await GetActivePolicyAsync(reference);
+
+        policy.Status = PolicyStatus.Cancelled;
+        await policyRepository.UpdatePolicyAsync(policy);
+
+        return new Refund
+        {
+            Reference = policy.Reference,
+            Type = policy.Payment.Type,
+            Amount = CalculateRefundAmount(policy)
+        };
+    }
+
+    private async Task<Policy> GetActivePolicyAsync(string reference)
+    {
+        var policy = await policyRepository.GetPolicyByReferenceAsync(reference);
+
+        if (policy.Status != PolicyStatus.Active)
+        {
+            throw new ValidationException(
+            [
+                $"Policy has already been {policy.Status}."
+            ]);
+        }
+
+        return policy;
     }
 
     private decimal CalculateRefundAmount(Policy policy)
     {
-        if (DateTime.UtcNow <= policy.StartDate.AddDays(14))
+        if (DateTime.UtcNow <= policy.StartDate.AddDays(CANCEL_COOL_OFF_DAYS))
         {
             return policy.Amount;
         }
@@ -156,7 +177,10 @@ public class PolicyService(IPolicyRepository policyRepository) : IPolicyService
         var daysRemaining = (policy.EndDate - DateTime.UtcNow).TotalDays;
         var policyDays = (policy.EndDate - policy.StartDate).TotalDays;
 
-        return policy.Amount * (decimal)(daysRemaining / policyDays);
+        return Math.Round(
+            policy.Amount * 
+            (decimal)(daysRemaining / policyDays), 
+            2);
         
     }
 }

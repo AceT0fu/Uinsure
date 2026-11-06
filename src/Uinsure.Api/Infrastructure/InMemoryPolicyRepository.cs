@@ -46,7 +46,7 @@ public class InMemoryPolicyRepository : IPolicyRepository
         var policy1 = new Policy
         {
             Reference = "POL001",
-            Type = PolicyType.Household,
+            PolicyType = PolicyType.Household,
             StartDate = DateTime.UtcNow.AddMonths(-2),
             EndDate = DateTime.UtcNow.AddMonths(10),
             Amount = 500m,
@@ -81,7 +81,7 @@ public class InMemoryPolicyRepository : IPolicyRepository
         var policy2 = new Policy
         {
             Reference = "POL002",
-            Type = PolicyType.BuyToLet,
+            PolicyType = PolicyType.BuyToLet,
             StartDate = DateTime.UtcNow.AddDays(-5),
             EndDate = DateTime.UtcNow.AddYears(1).AddDays(-5),
             Amount = 750m,
