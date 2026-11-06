@@ -2,7 +2,6 @@
 using Uinsure.Api.DTOs;
 using Uinsure.Api.Infrastructure;
 using Uinsure.Api.Services;
-using Uinsure.Api.Validation;
 using Uinsure.Api.Validation.Exceptions;
 using Uinsure.Models;
 using Uinsure.Models.Enums;
@@ -123,15 +122,17 @@ public class SellPolicyTests
             () => service.SellPolicyAsync(request));
     }
 
-    [Fact]
-    public async Task SellPolicy_WhenPolicyDurationIsInvalid_ThrowsValidationException()
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(1)]
+    public async Task SellPolicy_WhenPolicyDurationIsInvalid_ThrowsValidationException(int offset)
     {
         // Arrange
         var repository = new Mock<IPolicyRepository>();
         var service = new PolicyService(repository.Object);
 
         var request = CreateValidSellPolicyRequest();
-        request.EndDate = request.StartDate.AddYears(SELL_POLICY_DURATION + 1);
+        request.EndDate = request.StartDate.AddYears(SELL_POLICY_DURATION + offset);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ValidationException>(

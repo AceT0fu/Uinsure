@@ -4,8 +4,9 @@ using Uinsure.Api.Models.Enums;
 using Uinsure.Api.Services;
 using Uinsure.Api.Validation.Exceptions;
 using Uinsure.Models;
-using static Uinsure.Tests.TestHelpers.TestHelpers;
+using Uinsure.Models.Enums;
 using static Uinsure.Api.Validation.Constants;
+using static Uinsure.Tests.TestHelpers.TestHelpers;
 
 namespace Uinsure.Tests.PolicyServiceTests;
 
@@ -37,6 +38,8 @@ public class RenewPolicyTests
 
         Assert.Equal(existingPolicy.EndDate, renewedPolicy.StartDate);
         Assert.Equal(existingPolicy.EndDate.AddYears(1), renewedPolicy.EndDate);
+
+        Assert.Equal(PolicyStatus.Renewed, existingPolicy.Status);
 
         repository.Verify(
             r => r.CreatePolicyAsync(
@@ -159,6 +162,32 @@ public class RenewPolicyTests
             () => service.RenewPolicyAsync(TestReference));
         Assert.Contains(
             $"Policy has already been {existingPolicy.Status}.",
+            exception.Errors);
+    }
+
+    [Fact]
+    public async Task RenewPolicy_WhenAutoRenewAndPaymentIsCheque_ThrowsValidationException()
+    {
+        // Arrange
+        var existingPolicy = CreateExistingPolicy();
+
+        existingPolicy.AutoRenew = true;
+        existingPolicy.Payment.Type = PaymentType.Cheque;
+
+        var repository = new Mock<IPolicyRepository>();
+
+        repository
+            .Setup(r => r.GetPolicyByReferenceAsync(TestReference))
+            .ReturnsAsync(existingPolicy);
+
+        var service = new PolicyService(repository.Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ValidationException>(
+            () => service.RenewPolicyAsync(TestReference));
+
+        Assert.Contains(
+            "Auto-renew policy renewals cannot be paid by cheque.",
             exception.Errors);
     }
 }

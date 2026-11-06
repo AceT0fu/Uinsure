@@ -72,6 +72,7 @@ public class PolicyService(IPolicyRepository policyRepository) : IPolicyService
             throw new ValidationException(errors);
         }
 
+        // Could be moved to a mapper later to reduce code clutter/duplication.
         var renewedPolicy = new Policy()
         {
             Reference = Guid.NewGuid().ToString(),
@@ -111,6 +112,9 @@ public class PolicyService(IPolicyRepository policyRepository) : IPolicyService
         // For renewals, create a new policy to keep the history of the previous policy intact
         await policyRepository.CreatePolicyAsync(renewedPolicy);
 
+        policy.Status = PolicyStatus.Renewed;
+        await policyRepository.UpdatePolicyAsync(policy);
+
         return renewedPolicy;
     }
 
@@ -145,6 +149,7 @@ public class PolicyService(IPolicyRepository policyRepository) : IPolicyService
     {
         var policy = await policyRepository.GetPolicyByReferenceAsync(reference);
 
+        // Policies that have been cancelled or renewed cannot be acted upon again.
         if (policy.Status != PolicyStatus.Active)
         {
             throw new ValidationException(

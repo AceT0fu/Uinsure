@@ -1,5 +1,6 @@
 ﻿using Uinsure.Api.DTOs;
 using Uinsure.Models;
+using Uinsure.Models.Enums;
 using static Uinsure.Api.Validation.Constants;
 
 namespace Uinsure.Api.Validation;
@@ -54,6 +55,12 @@ public static class PolicyValidator
         if (DateTime.UtcNow > policy.EndDate)
         {
             errors.Add($"Policy with cannot be renewed after its end date.");
+        }
+
+        if (policy.AutoRenew &&
+            policy.Payment.Type == PaymentType.Cheque)
+        {
+            errors.Add("Auto-renew policy renewals cannot be paid by cheque.");
         }
 
         return errors;
