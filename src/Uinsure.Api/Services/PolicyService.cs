@@ -17,12 +17,7 @@ public class PolicyService(IPolicyRepository policyRepository) : IPolicyService
 
     public async Task<Policy> SellPolicyAsync(SellPolicyRequest request)
     {
-        var errors = PolicyValidator.ValidateSellPolicyRequest(request);
-
-        if (errors.Any())
-        {
-            throw new ValidationException(errors);
-        }
+        PolicyValidator.ValidateSellPolicyRequest(request);
 
         // Could be moved to a mapper later to reduce code clutter/duplication.
         var policy = new Policy()
@@ -65,12 +60,7 @@ public class PolicyService(IPolicyRepository policyRepository) : IPolicyService
     {
         var policy = await GetActivePolicyAsync(reference);
 
-        var errors = PolicyValidator.ValidateRenewPolicy(policy);
-
-        if (errors.Any())
-        {
-            throw new ValidationException(errors);
-        }
+        PolicyValidator.ValidateRenewPolicy(policy);
 
         // Could be moved to a mapper later to reduce code clutter/duplication.
         var renewedPolicy = new Policy()

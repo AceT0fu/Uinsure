@@ -1,4 +1,5 @@
 ﻿using Uinsure.Api.DTOs;
+using Uinsure.Api.Validation.Exceptions;
 using Uinsure.Models;
 using Uinsure.Models.Enums;
 using static Uinsure.Api.Validation.Constants;
@@ -8,7 +9,7 @@ namespace Uinsure.Api.Validation;
 // Throws a list of errors from validating the request
 public static class PolicyValidator
 {
-    public static List<string> ValidateSellPolicyRequest(SellPolicyRequest request)
+    public static void ValidateSellPolicyRequest(SellPolicyRequest request)
     {
         var errors = new List<string>();
 
@@ -25,25 +26,28 @@ public static class PolicyValidator
         if (request.PolicyHolders == null)
         {
             errors.Add("At least one policy holder is required.");
-            return errors;
+            ThrowIfErrors(errors);
         }
-
-        if (request.PolicyHolders.Count < SELL_MIN_POLICY_HOLDERS || 
-            request.PolicyHolders.Count > SELL_MAX_POLICY_HOLDERS)
+        else
         {
-            errors.Add($"Policy must have between {SELL_MIN_POLICY_HOLDERS} and {SELL_MAX_POLICY_HOLDERS} policy holders.");
-        }
 
-        // Requirements says over 16, but I'm assuming that means 16 and over
-        if (request.PolicyHolders.Any(ph => ph.DateOfBirth.AddYears(SELL_MIN_POLICY_HOLDER_AGE) > request.StartDate))
-        {
-            errors.Add($"All policy holders must be at least {SELL_MIN_POLICY_HOLDER_AGE} years old.");
-        }
+            if (request.PolicyHolders.Count < SELL_MIN_POLICY_HOLDERS ||
+                request.PolicyHolders.Count > SELL_MAX_POLICY_HOLDERS)
+            {
+                errors.Add($"Policy must have between {SELL_MIN_POLICY_HOLDERS} and {SELL_MAX_POLICY_HOLDERS} policy holders.");
+            }
 
-        return errors;
+            // Requirements says over 16, but I'm assuming that means 16 and over
+            if (request.PolicyHolders.Any(ph => ph.DateOfBirth.AddYears(SELL_MIN_POLICY_HOLDER_AGE) > request.StartDate))
+            {
+                errors.Add($"All policy holders must be at least {SELL_MIN_POLICY_HOLDER_AGE} years old.");
+            }
+
+            ThrowIfErrors(errors);
+        }
     }
 
-    public static List<string> ValidateRenewPolicy(Policy policy)
+    public static void ValidateRenewPolicy(Policy policy)
     {
         var errors = new List<string>();
 
@@ -63,6 +67,14 @@ public static class PolicyValidator
             errors.Add("Auto-renew policy renewals cannot be paid by cheque.");
         }
 
-        return errors;
+        ThrowIfErrors(errors);
+    }
+
+    private static void ThrowIfErrors(List<string> errors)
+    {
+        if (errors.Any())
+        {
+            throw new ValidationException(errors);
+        }
     }
 }
